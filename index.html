@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Financia 2.0 - Gestão Profissional</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="stylesheet" href="style.css">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primario: '#dc2626',
+                        primarioHover: '#b91c1c',
+                        primarioClaro: 'rgba(220, 38, 38, 0.15)',
+                        primarioBorda: 'rgba(220, 38, 38, 0.3)',
+                        sucesso: '#16a34a',
+                        alerta: '#f59e0b',
+                        info: '#2563eb',
+                        secundario: '#1e293b',
+                        escuro: '#0f172a',
+                        claro: '#f8fafc'
+                    },
+                    fontFamily: { sans: ['Inter', 'Segoe UI', 'sans-serif'] }
+                }
+            }
+        }
+    </script>
+       
+</head>
+<body>
+
+<!-- Cabeçalho Mobile -->
+<header class="menu-mobile sticky top-0 z-30 bg-secundario border-b border-slate-700 px-4 py-3 flex justify-between items-center">
+    <button onclick="abrirMenu()" class="text-2xl cor-primaria"><i class="fa fa-bars"></i></button>
+    <h1 class="text-xl font-bold cor-primaria">Finança 2.0</h1>
+    <div class="w-8"></div>
+</header>
+
+<!-- Overlay Menu -->
+<div class="overlay" id="overlayMenu" onclick="fecharMenu()"></div>
+
+<!-- Menu Lateral -->
+<aside class="sidebar" id="sidebar">
+    <div class="mb-8 hidden lg:block">
+        <h1 class="text-2xl font-bold cor-primaria">Finança 2.0</h1>
+        <p class="text-sm text-slate-400">Gestão de Compromissos</p>
+    </div>
+    <nav class="space-y-1">
+        <div class="sidebar-link ativo" onclick="mostrarAba('painel')">
+            <i class="fa fa-home w-5 text-center"></i> Painel Geral
+        </div>
+        <div class="sidebar-link" onclick="mostrarAba('clientes')">
+            <i class="fa fa-users w-5 text-center"></i> Meus Clientes
+        </div>
+        <div class="sidebar-link" onclick="abrirModalNovo()">
+            <i class="fa fa-plus-circle w-5 text-center"></i> Novo Compromisso
+        </div>
+        <div class="sidebar-link" onclick="mostrarAba('perfil')">
+            <i class="fa fa-user-circle w-5 text-center"></i> Meu Perfil
+        </div>
+        <div class="sidebar-link" onclick="mostrarAba('temas')">
+            <i class="fa fa-paint-brush w-5 text-center"></i> Mudar Cor do Painel
+        </div>
+    </nav>
+</aside>
+
+<!-- Conteúdo Principal -->
+<main class="conteudo-principal p-4 md:p-6 lg:p-8">
+
+    <!-- ABA PAINEL -->
+    <section id="aba-painel">
+        <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
+            <div>
+                <h2 class="text-2xl font-bold">Visão Geral</h2>
+                <p class="text-slate-400">Controle total dos seus compromissos</p>
+            </div>
+            <button class="btn btn-primario" onclick="abrirModalNovo()">
+                <i class="fa fa-plus"></i> Novo Compromisso
+            </button>
+        </div>
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+            <div class="card card-hover">
+                <p class="text-slate-400 text-sm">Em Andamento</p>
+                <p class="text-3xl font-bold mt-2" id="qtdAndamento">0</p>
+            </div>
+            <div class="card card-hover">
+                <p class="text-slate-400 text-sm">Atrasados</p>
+                <p class="text-3xl font-bold mt-2 cor-primaria" id="qtdAtrasados">0</p>
+            </div>
+            <div class="card card-hover">
+                <p class="text-slate-400 text-sm">Concluídos</p>
+                <p class="text-3xl font-bold mt-2 text-sucesso" id="qtdConcluidos">0</p>
+            </div>
+            <div class="card card-hover">
+                <p class="text-slate-400 text-sm">Total Emprestado</p>
+                <p class="text-2xl font-bold mt-2 cor-primaria" id="totalValor">R$ 0,00</p>
+            </div>
+        </div>
+        <div class="card mb-8">
+            <h3 class="text-lg font-semibold mb-4">Resumo Geral</h3>
+            <div class="grafico-container"><canvas id="graficoStatus"></canvas></div>
+        </div>
+        <div class="card">
+            <h3 class="text-lg font-semibold mb-4">Últimos Compromissos</h3>
+            <div id="listaUltimos" class="space-y-3"></div>
+        </div>
+    </section>
+
+    <!-- ABA CLIENTES -->
+    <section id="aba-clientes" class="hidden">
+        <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
+            <div>
+                <h2 class="text-2xl font-bold">Meus Clientes</h2>
+                <p class="text-slate-400">Gerencie todos os compromissos</p>
+            </div>
+            <button class="btn btn-primario" onclick="abrirModalNovo()">
+                <i class="fa fa-plus"></i> Novo Compromisso
+            </button>
+        </div>
+        <div id="listaClientes" class="space-y-4"></div>
+    </section>
+
+    <!-- ABA PERFIL -->
+    <section id="aba-perfil" class="hidden">
+        <div class="mb-6">
+            <h2 class="text-2xl font-bold">Meu Perfil</h2>
+            <p class="text-slate-400">Seus dados e do seu negócio</p>
+        </div>
+        <div class="card max-w-2xl mx-auto">
+            <div class="flex flex-col md:flex-row items-center gap-6 mb-6">
+                <div class="relative">
+                    <input type="file" id="fotoPerfil" accept="image/*" class="hidden" onchange="carregarFoto(this)">
+                    <div id="areaFoto" class="foto-perfil foto-perfil-vazia" onclick="document.getElementById('fotoPerfil').click()">
+                        <i class="fa fa-user"></i>
+                    </div>
+                </div>
+                <div class="flex-1 text-center md:text-left">
+                    <h3 id="perfilNomeExibicao" class="text-xl font-bold">Seu Nome</h3>
+                    <p id="perfilMarcaExibicao" class="text-slate-400">Nome do seu Negócio</p>
+                </div>
+                <button class="btn-lapis" title="Editar Perfil" onclick="alternarEdicaoPerfil()">
+                    <i class="fa fa-pencil"></i>
+                </button>
+            </div>
+            <div id="visualizacaoPerfil">
+                <div class="info-linha"><span class="info-label">Nome Completo</span><span class="info-valor" id="perfilNomeValor">—</span></div>
+                <div class="info-linha"><span class="info-label">Nome do Negócio / Marca</span><span class="info-valor" id="perfilMarcaValor">—</span></div>
+                <div class="info-linha"><span class="info-label">Telefone / WhatsApp</span><span class="info-valor" id="perfilTelefoneValor">—</span></div>
+                <div class="info-linha"><span class="info-label">E-mail</span><span class="info-valor" id="perfilEmailValor">—</span></div>
+                <div class="info-linha"><span class="info-label">CPF / CNPJ</span><span class="info-valor" id="perfilDocumentoValor">—</span></div>
+                <div class="info-linha border-b-0"><span class="info-label">Endereço Completo</span><span class="info-valor" id="perfilEnderecoValor">—</span></div>
+            </div>
+            <div id="edicaoPerfil" class="area-edicao">
+                <form id="formPerfil" class="space-y-4">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div><label class="block text-sm text-slate-300 mb-1">Nome Completo</label><input type="text" id="perfilNome" class="input" placeholder="Seu nome completo"></div>
+                        <div><label class="block text-sm text-slate-300 mb-1">Nome do Negócio / Marca</label><input type="text" id="perfilMarca" class="input" placeholder="Ex: Financia Fácil"></div>
+                    </div>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div><label class="block text-sm text-slate-300 mb-1">Telefone / WhatsApp</label><input type="text" id="perfilTelefone" class="input" placeholder="(00) 00000-0000"></div>
+                        <div><label class="block text-sm text-slate-300 mb-1">E-mail</label><input type="email" id="perfilEmail" class="input" placeholder="seu@email.com"></div>
+                    </div>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div><label class="block text-sm text-slate-300 mb-1">CPF / CNPJ</label><input type="text" id="perfilDocumento" class="input" placeholder="000.000.000-00"></div>
+                        <div><label class="block text-sm text-slate-300 mb-1">Endereço Completo</label><input type="text" id="perfilEndereco" class="input" placeholder="Rua, nº, bairro, cidade/UF"></div>
+                    </div>
+                    <div class="flex gap-3 justify-end pt-2">
+                        <button type="button" class="btn btn-outline" onclick="alternarEdicaoPerfil()">Cancelar</button>
+                        <button type="submit" class="btn btn-primario">Salvar Alterações</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+        <div class="card mt-6 border border-cor-primaria">
+            <h3 class="text-lg font-semibold cor-primaria mb-2">Zona de Perigo</h3>
+            <p class="text-sm text-slate-400 mb-4">Ação irreversível: apaga todos os dados cadastrados.</p>
+            <button class="btn btn-outline cor-primaria border-cor-primaria hover:bg-cor-primaria hover:text-white" onclick="apagarTudo()">
+                <i class="fa fa-trash"></i> Apagar Todos os Dados
+            </button>
+        </div>
+    </section>
+
+    <!-- ABA MUDAR COR -->
+    <section id="aba-temas" class="hidden">
+        <div class="mb-6">
+            <h2 class="text-2xl font-bold">Mudar Cor do Painel</h2>
+            <p class="text-slate-400">Escolha a cor que você preferir para todo o sistema</p>
+        </div>
+        <div class="card max-w-2xl">
+            <h3 class="text-lg font-semibold mb-4">Cores Disponíveis</h3>
+            <div class="flex flex-wrap gap-4 justify-center md:justify-start">
+                <div class="opcao-cor selecionada" style="background-color: #dc2626;" onclick="aplicarCor('#dc2626', '#b91c1c')" title="Vermelho"></div>
+                <div class="opcao-cor" style="background-color: #2563eb;" onclick="aplicarCor('#2563eb', '#1d4ed8')" title="Azul"></div>
+                <div class="opcao-cor" style="background-color: #16a34a;" onclick="aplicarCor('#16a34a', '#15803d')" title="Verde"></div>
+                <div class="opcao-cor" style="background-color: #f59e0b;" onclick="aplicarCor('#f59e0b', '#d97706')" title="Laranja"></div>
+                <div class="opcao-cor" style="background-color: #9333ea;" onclick="aplicarCor('#9333ea', '#7e22ce')" title="Roxo"></div>
+                <div class="opcao-cor" style="background-color: #db2777;" onclick="aplicarCor('#db2777', '#be185d')" title="Rosa"></div>
+                <div class="opcao-cor" style="background-color: #0891b2;" onclick="aplicarCor('#0891b2', '#0e7490')" title="Ciano"></div>
+                <div class="opcao-cor" style="background-color: #4f46e5;" onclick="aplicarCor('#4f46e5', '#4338ca')" title="Índigo"></div>
+            </div>
+            <p class="text-sm text-slate-400 mt-6 text-center md:text-left">A cor muda automaticamente e fica salva para sempre!</p>
+        </div>
+    </section>
+
+</main>
+
+<!-- MODAL NOVO / EDITAR -->
+<div class="overlay" id="overlayModal" onclick="fecharModal()"></div>
+<div class="modal" id="modalCadastro">
+    <div class="p-5 border-b border-slate-700 flex justify-between items-center sticky top-0 bg-secundario">
+        <h3 class="text-xl font-bold cor-primaria" id="tituloModal">Novo Compromisso</h3>
+        <button onclick="fecharModal()" class="text-slate-400 hover:text-white text-xl">&times;</button>
+    </div>
+    <form id="formCadastro" class="p-5 space-y-4">
+        <input type="hidden" id="indiceEdicao">
+        <div>
+            <label class="block text-sm text-slate-300 mb-1">Nome do Cliente *</label>
+            <input type="text" id="nomeCliente" class="input" required placeholder="Nome completo">
+        </div>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+                <label class="block text-sm text-slate-300 mb-1">Valor Emprestado (R$) *</label>
+                <input type="number" step="0.01" id="valorBase" class="input" required placeholder="1000.00">
+            </div>
+            <div>
+                <label class="block text-sm text-slate-300 mb-1">Quantidade de Parcelas *</label>
+                <input type="number" min="1" id="qtdParcelas" class="input" required placeholder="1">
+                <p class="text-xs text-slate-400 mt-1">1x=25% | 2x=30% | +2x=+5% por parcela</p>
+            </div>
+        </div>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+                <label class="block text-sm text-slate-300 mb-1">Data do Empréstimo *</label>
+                <input type="date" id="dataEmprestimo" class="input" required>
+            </div>
+            <div>
+                <label class="block text-sm text-slate-300 mb-1">WhatsApp do Cliente</label>
+                <input type="text" id="contatoCliente" class="input" placeholder="(00) 00000-0000">
+            </div>
+        </div>
+        <div>
+            <label class="block text-sm text-slate-300 mb-1">Observações / Contracheque</label>
+            <textarea id="observacoes" rows="3" class="input" placeholder="Dados importantes..."></textarea>
+        </div>
+        <div class="flex gap-3 justify-end pt-2">
+            <button type="button" onclick="fecharModal()" class="btn btn-outline">Cancelar</button>
+            <button type="submit" class="btn btn-primario">Salvar</button>
+        </div>
+    </form>
+</div>
+
+<!-- MODAL DETALHES -->
+<div class="modal" id="modalDetalhes">
+    <div class="p-5 border-b border-slate-700 flex justify-between items-center sticky top-0 bg-secundario">
+        <h3 class="text-xl font-bold cor-primaria">Detalhes do Compromisso</h3>
+        <button onclick="fecharModalDetalhes()" class="text-slate-400 hover:text-white text-xl">&times;</button>
+    </div>
+    <div id="conteudoDetalhes" class="p-5"></div>
+</div>
+
+<script src="script.js"></script>
+
+</body>
+</html>
