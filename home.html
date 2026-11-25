@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Painel Financeiro & Empréstimos</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.13.2/font/bootstrap-icons.min.css">
+    <link rel="stylesheet" href="home.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.8/dist/chart.umd.min.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+</head>
+<body>
+    
+    <!-- MENU LATERAL / HAMBÚRGUER -->
+    <nav class="menu-lateral" id="menuLateral">
+        <div class="btn-menu" id="btnToggle">
+            <i class="bi bi-list"></i>
+        </div>
+        <ul>
+            <li class="item-menu ativo" onclick="mostrarTela('painelgeral', this)">
+                <a href="#"><span class="icon"><i class="bi bi-house-fill"></i></span><span class="text-link">Painel Geral</span></a>
+            </li>
+            <li class="item-menu" onclick="mostrarTela('telaclientes', this)">
+                <a href="#"><span class="icon"><i class="bi bi-person-fill"></i></span><span class="text-link">Meus Clientes</span></a>
+            </li>
+            <li class="item-menu" onclick="mostrarTela('tela-compromissos', this)">
+                <a href="#"><span class="icon"><i class="bi bi-calendar-check-fill"></i></span><span class="text-link">Compromissos</span></a>
+            </li>
+            <li class="item-menu" onclick="mostrarTela('tela-perfil', this)">
+                <a href="#"><span class="icon"><i class="bi bi-person-badge-fill"></i></span><span class="text-link">Meu Perfil</span></a>
+            </li>
+        </ul>
+    </nav>
+
+    <div class="conteudo"> 
+        <!-- TELA PAINEL GERAL -->
+        <div id="painelgeral" class="tela visivel">
+            <div class="topo">
+                <div class="perfil-topo">
+                    <div class="avatar" id="avatar-usuario">👤</div>
+                    <div>
+                        <h1 id="mostrarNome">Meu Painel</h1>
+                        <span style="font-size: 12px; color: var(--texto-claro);" id="mostrarEmail">Gestão Financeira</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="grade-resumo">
+                <div class="card-resumo">
+                    <span class="rotulo">Total Emprestado</span>
+                    <span class="valor res-entrada" id="painel-emprestado">R$ 0,00</span>
+                </div>
+                <div class="card-resumo">
+                    <span class="rotulo">Total Já Recebido</span>
+                    <span class="valor res-gasto" id="painel-recebido">R$ 0,00</span>
+                </div>
+                <div class="card-resumo">
+                    <span class="rotulo">Saldo Pendente</span>
+                    <span class="valor res-saldo" id="painel-pendente">R$ 0,00</span>
+                </div>
+            </div>
+
+            <div class="cartao">
+                <h3>📊 Visão Geral de Empréstimos</h3>
+                <div class="grafico-container">
+                    <canvas id="graficoPrincipal"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- TELA DE CLIENTES -->
+        <div id="telaclientes" class="tela">
+            
+            <!-- LISTA DE PESSOAS (SÓ APARECE SE NENHUMA ESTIVER SELECIONADA) -->
+            <section id="secao-lista" class="secao visivel">
+                <header class="cabecalho">
+                    <h1>Meus Clientes</h1>
+                    <button class="btn-principal" onclick="abrirModalPessoa()">➕ Nova Pessoa</button>
+                </header>
+                <div class="grid-pessoas" id="lista-pessoas"></div>
+            </section>
+
+            <!-- PERFIL DA PESSOA ESPECÍFICA (SÓ APARECE AO CLICAR EM UM CLIENTE) -->
+            <section id="secao-perfil" class="secao">
+                <button class="btn-voltar" onclick="voltarLista()">← Voltar para a lista</button>
+                
+                <div class="perfil-card">
+                    <div class="perfil-esquerda">
+                        <div class="foto-perfil" id="foto-perfil">👤</div>
+                        <div>
+                            <h2 id="nome-pessoa">Nome</h2>
+                            <p style="font-size: 13px; color: var(--texto-claro);" id="tel-pessoa"></p>
+                            <p style="font-size: 12px; font-style: italic; color: #f43f5e;" id="obs-pessoa"></p>
+                            <div id="container-whatsapp" style="margin-top: 6px;"></div>
+                        </div>
+                    </div>
+                    <div class="perfil-botoes">
+                        <button class="btn-icone" onclick="abrirModalEditarPessoa()" title="Editar Cliente">✏️</button>
+                        <button class="btn-icone" onclick="confirmarExcluirPessoa()" title="Excluir Cliente" style="background: var(--cor-vermelho);">🗑️</button>
+                    </div>
+                </div>
+
+                <div class="resumo-card">
+                    <h3>📊 Resumo Financeiro da Pessoa</h3>
+                    <div class="resumo-grid">
+                        <div class="resumo-item">
+                            <span class="resumo-valor" id="total-emprestado">R$ 0,00</span>
+                            <span class="resumo-label">Total Emprestado</span>
+                        </div>
+                        <div class="resumo-item destaque">
+                            <span class="resumo-valor" id="total-a-receber">R$ 0,00</span>
+                            <span class="resumo-label">A Receber</span>
+                        </div>
+                        <div class="resumo-item">
+                            <span class="resumo-valor" id="valor-pago">R$ 0,00</span>
+                            <span class="resumo-label">Já Pago</span>
+                        </div>
+                    </div>
+                    <div class="progresso-container">
+                        <div class="progresso-info">
+                            <span>Progresso</span>
+                            <span id="porcentagem-pago">0%</span>
+                        </div>
+                        <div class="progresso-barra">
+                            <div class="progresso-preenchimento" id="barra-progresso" style="width: 0%"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-card">
+                    <h3 id="titulo-form">Novo Empréstimo</h3>
+                    <input type="hidden" id="editando-id" value="">
+                    
+                    <div class="form-grid">
+                        <div class="form-grupo">
+                            <label>Valor Emprestado (R$)</label>
+                            <input type="number" id="valor" step="0.01" placeholder="0,00">
+                        </div>
+                        <div class="form-grupo">
+                            <label>Nº de Parcelas</label>
+                            <input type="number" id="parcelas" placeholder="1" min="1">
+                        </div>
+                        <div class="form-grupo">
+                            <label>Juros (%)</label>
+                            <input type="number" id="juros" step="0.01" placeholder="0">
+                        </div>
+                        <div class="form-grupo">
+                            <label>Data</label>
+                            <input type="date" id="data">
+                        </div>
+                    </div>
+                    
+                    <button class="btn-principal" id="btn-salvar" onclick="salvarEmprestimo()">Registrar Empréstimo</button>
+                    <button class="btn-secundario" id="btn-atualizar" onclick="salvarEmprestimo()">✅ Atualizar</button>
+                    <button class="btn-cancelar" id="btn-cancelar" onclick="limparForm()">✖️ Cancelar</button>
+                </div>
+
+                <div class="historico-card">
+                    <h3>📋 Histórico de Empréstimos & Dívidas</h3>
+                    <div id="lista-historico"></div>
+                </div>
+            </section>
+        </div>
+
+        <!-- TELA PERFIL -->
+        <div id="tela-perfil" class="tela">
+            <div class="cartao">
+                <h2>👤 Configurar Meu Perfil</h2>
+                <div class="form-grid" style="margin-top: 15px;">
+                    <div class="form-grupo">
+                        <label>Seu Nome</label>
+                        <input type="text" id="input-meu-nome" placeholder="Digite seu nome">
+                    </div>
+                    <div class="form-grupo">
+                        <label>Link da Sua Foto (URL)</label>
+                        <input type="text" id="input-minha-foto" placeholder="https://...">
+                    </div>
+                </div>
+                <button class="btn-principal" onclick="salvarMeuPerfil()" style="margin-top: 15px;">💾 Salvar Perfil</button>
+            </div>
+        </div> 
+        
+        <!-- TELA COMPROMISSOS -->
+        <div id="tela-compromissos" class="tela">
+            <div class="cartao">
+                <h2>📅 Compromissos & Anotações</h2>
+                <div class="form-grid" style="margin-top: 15px;">
+                    <div class="form-grupo">
+                        <label>Título / Lembrete</label>
+                        <input type="text" id="comp-titulo" placeholder="Ex: Cobrar João">
+                    </div>
+                    <div class="form-grupo">
+                        <label>Data</label>
+                        <input type="date" id="comp-data">
+                    </div>
+                </div>
+                <button class="btn-principal" onclick="salvarCompromisso()" style="margin-top: 15px;">➕ Adicionar Lembrete</button>
+            </div>
+
+            <div class="historico-card">
+                <h3>📌 Meus Lembretes</h3>
+                <div id="lista-compromissos"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL PESSOA -->
+    <div class="fundo-modal" id="modal-pessoa">
+        <div class="modal">
+            <button class="btn-fechar-x" onclick="fecharModal()">✖️</button>
+            <h3 id="modal-titulo">Nova Pessoa</h3>
+            <input type="hidden" id="modal-id">
+            
+            <div class="form-grupo" style="margin-bottom: 12px;">
+                <label>Nome Completo *</label>
+                <input type="text" id="modal-nome" placeholder="Digite o nome">
+            </div>
+            <div class="form-grupo" style="margin-bottom: 12px;">
+                <label>Telefone / WhatsApp</label>
+                <input type="tel" id="modal-tel" placeholder="(00) 00000-0000">
+            </div>
+            <div class="form-grupo" style="margin-bottom: 12px;">
+                <label>Observações</label>
+                <input type="text" id="modal-obs" placeholder="Ex: Paga todo dia 15">
+            </div>
+            <div class="form-grupo" style="margin-bottom: 12px;">
+                <label>Link da Foto (URL)</label>
+                <input type="text" id="modal-foto" placeholder="https://...">
+            </div>
+            
+            <div class="botoes-modal">
+                <button class="btn-cancelar" onclick="fecharModal()" style="display:block;">Cancelar</button>
+                <button class="btn-principal" onclick="salvarPessoa()">💾 Salvar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL DETALHES EMPRÉSTIMO -->
+    <div class="fundo-modal" id="modal-detalhes">
+        <div class="modal">
+            <button class="btn-fechar-x" onclick="fecharDetalhes()">✖️</button>
+            <h3>⚙️ Gerenciar Empréstimo</h3>
+            <div id="conteudo-detalhes" style="margin-bottom: 20px; font-size: 14px; line-height: 1.6; text-align: left;"></div>
+            <div class="botoes-modal">
+                <button class="btn-principal" onclick="editarSelecionado()">✏️ Editar</button>
+                <button class="btn-excluir" onclick="excluirSelecionado()">🗑️ Excluir</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="home.js"></script>
+</body>
+</html>
