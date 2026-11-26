@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="pt-BR" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Acesso Corporativo | Painel Financeiro</title>
+    <link rel="icon" type="image/png" href="https://www.google.com/s2/favicons?domain=microsoft.com&sz=64">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <link rel="stylesheet" href="home.css">
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
+    <style>
+        .auth-wrapper {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            position: relative;
+            z-index: 1;
+        }
+        .auth-card {
+            background: var(--cor-fundo-secundario);
+            backdrop-filter: blur(16px);
+            border: 1px solid var(--cor-borda);
+            border-radius: 22px;
+            padding: 32px 26px;
+            width: 100%;
+            max-width: 420px;
+            box-shadow: var(--sombra);
+        }
+        .auth-logo {
+            width: 56px;
+            height: 56px;
+            border-radius: 16px;
+            background: linear-gradient(135deg, var(--cor-azul), var(--cor-verde));
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 26px;
+            margin: 0 auto 14px auto;
+            box-shadow: 0 8px 20px rgba(59, 130, 246, 0.3);
+        }
+        .auth-tabs {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            background: var(--cor-card);
+            padding: 4px;
+            border-radius: 12px;
+            border: 1px solid var(--cor-borda);
+            margin: 20px 0;
+        }
+        .auth-tab {
+            padding: 10px;
+            border: none;
+            background: transparent;
+            color: var(--texto-claro);
+            font-weight: 600;
+            font-size: 13px;
+            border-radius: 9px;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+        .auth-tab.ativo {
+            background: var(--cor-azul);
+            color: white;
+        }
+        .lembrar-box {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin: 14px 0 18px 0;
+            font-size: 13px;
+            color: var(--texto-claro);
+        }
+        .lembrar-label {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            cursor: pointer;
+            user-select: none;
+        }
+        .lembrar-label input[type="checkbox"] {
+            width: 17px;
+            height: 17px;
+            accent-color: var(--cor-azul);
+            cursor: pointer;
+        }
+        .link-esqueci {
+            color: var(--cor-azul);
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 12px;
+        }
+        .link-esqueci:hover { text-decoration: underline; }
+    </style>
+</head>
+<body>
+    <canvas id="canvas-particulas"></canvas>
+    <div id="toast-container" class="toast-container"></div>
+
+    <div class="auth-wrapper">
+        <div class="auth-card animar-entrada">
+            <div class="auth-logo"><i class="bi bi-shield-lock-fill"></i></div>
+            <h1 style="text-align: center; font-size: 20px; font-weight: 700;">Painel Corporativo</h1>
+            <p style="text-align: center; font-size: 13px; color: var(--texto-claro); margin-top: 4px;">Ambiente financeiro individual e seguro</p>
+
+            <div class="auth-tabs">
+                <button class="auth-tab ativo" id="tab-login" onclick="alternarAbaAuth('login')">Entrar</button>
+                <button class="auth-tab" id="tab-cadastro" onclick="alternarAbaAuth('cadastro')">Criar Conta</button>
+            </div>
+
+            <!-- FORMULÁRIO DE LOGIN -->
+            <form id="form-login" onsubmit="fazerLogin(event)">
+                <div class="form-grupo" style="margin-bottom: 12px;">
+                    <label>E-mail</label>
+                    <input type="email" id="login-email" placeholder="seu@email.com" required>
+                </div>
+                <div class="form-grupo" style="margin-bottom: 8px;">
+                    <label>Senha</label>
+                    <input type="password" id="login-senha" placeholder="••••••••" required>
+                </div>
+
+                <div class="lembrar-box">
+                    <label class="lembrar-label">
+                        <input type="checkbox" id="check-lembrar" checked>
+                        Lembrar de mim
+                    </label>
+                    <a href="javascript:void(0)" class="link-esqueci" onclick="recuperarSenha()">Esqueci a senha</a>
+                </div>
+
+                <button type="submit" class="btn-principal" id="btn-entrar">
+                    <i class="bi bi-box-arrow-in-right"></i> Acessar Painel
+                </button>
+            </form>
+
+            <!-- FORMULÁRIO DE CADASTRO (Apenas Nome e E-mail obrigatórios) -->
+            <form id="form-cadastro" onsubmit="fazerCadastro(event)" style="display: none;">
+                <div class="form-grupo" style="margin-bottom: 12px;">
+                    <label>Nome Completo *</label>
+                    <input type="text" id="cad-nome" placeholder="Ex: João Silva" required>
+                </div>
+                <div class="form-grupo" style="margin-bottom: 12px;">
+                    <label>E-mail *</label>
+                    <input type="email" id="cad-email" placeholder="seu@email.com" required>
+                </div>
+                <div class="form-grupo" style="margin-bottom: 16px;">
+                    <label>Senha (mínimo 6 caracteres) *</label>
+                    <input type="password" id="cad-senha" placeholder="••••••••" minlength="6" required>
+                </div>
+
+                <button type="submit" class="btn-principal" id="btn-cadastrar">
+                    <i class="bi bi-person-check-fill"></i> Criar Minha Conta
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        const firebaseConfig = {
+            apiKey: "AIzaSyAo-P6CDEoZwDljmLOs9M4vyM8KVNpVNbQ",
+            authDomain: "aplicativo-78b22.firebaseapp.com",
+            databaseURL: "https://aplicativo-78b22-default-rtdb.firebaseio.com",
+            projectId: "aplicativo-78b22",
+            storageBucket: "aplicativo-78b22.firebasestorage.app",
+            messagingSenderId: "284898522347",
+            appId: "1:284898522347:web:fe02f582cec1ad53cafaae",
+            measurementId: "G-87VNV9Q3EJ"
+        };
+
+        if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+        const auth = firebase.auth();
+        const db = firebase.database();
+
+        auth.onAuthStateChanged(user => {
+            if (user && !window.cadastrandoAgora) {
+                window.location.href = 'home.html';
+            }
+        });
+
+        function alternarAbaAuth(aba) {
+            document.getElementById('tab-login').classList.toggle('ativo', aba === 'login');
+            document.getElementById('tab-cadastro').classList.toggle('ativo', aba === 'cadastro');
+            document.getElementById('form-login').style.display = aba === 'login' ? 'block' : 'none';
+            document.getElementById('form-cadastro').style.display = aba === 'cadastro' ? 'block' : 'none';
+        }
+
+        function notificarAuth(msg, tipo = 'sucesso') {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            toast.className = `toast ${tipo}`;
+            toast.innerHTML = `<i class="bi ${tipo === 'erro' ? 'bi-exclamation-octagon-fill' : 'bi-check-circle-fill'}"></i> <span>${msg}</span>`;
+            container.appendChild(toast);
+            setTimeout(() => toast.remove(), 3500);
+        }
+
+        function fazerLogin(e) {
+            e.preventDefault();
+            const email = document.getElementById('login-email').value.trim();
+            const senha = document.getElementById('login-senha').value;
+            const lembrar = document.getElementById('check-lembrar').checked;
+            const btn = document.getElementById('btn-entrar');
+
+            btn.disabled = true;
+            btn.innerHTML = '<i class="bi bi-hourglass-split"></i> Autenticando...';
+
+            const persistencia = lembrar 
+                ? firebase.auth.Auth.Persistence.LOCAL 
+                : firebase.auth.Auth.Persistence.SESSION;
+
+            auth.setPersistence(persistencia)
+                .then(() => auth.signInWithEmailAndPassword(email, senha))
+                .then(() => {
+                    window.location.href = 'home.html';
+                })
+                .catch(err => {
+                    btn.disabled = false;
+                    btn.innerHTML = '<i class="bi bi-box-arrow-in-right"></i> Acessar Painel';
+                    notificarAuth('E-mail ou senha incorretos.', 'erro');
+                });
+        }
+
+        function fazerCadastro(e) {
+            e.preventDefault();
+            const nome = document.getElementById('cad-nome').value.trim();
+            const email = document.getElementById('cad-email').value.trim();
+            const senha = document.getElementById('cad-senha').value;
+            const btn = document.getElementById('btn-cadastrar');
+
+            btn.disabled = true;
+            btn.innerHTML = '<i class="bi bi-hourglass-split"></i> Criando conta...';
+            window.cadastrandoAgora = true;
+
+            auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL)
+                .then(() => auth.createUserWithEmailAndPassword(email, senha))
+                .then(cred => {
+                    const uid = cred.user.uid;
+                    return db.ref(`usuarios/${uid}/configuracao/perfil`).set({
+                        nome,
+                        cpf: '',
+                        telefone: '',
+                        email,
+                        foto: '',
+                        metaFinanceira: 0,
+                        criadoEm: new Date().toISOString()
+                    });
+                })
+                .then(() => {
+                    notificarAuth('Conta criada com sucesso! Entrando...');
+                    setTimeout(() => { window.location.href = 'home.html'; }, 800);
+                })
+                .catch(err => {
+                    window.cadastrandoAgora = false;
+                    btn.disabled = false;
+                    btn.innerHTML = '<i class="bi bi-person-check-fill"></i> Criar Minha Conta';
+                    let msg = 'Erro ao criar conta.';
+                    if (err.code === 'auth/email-already-in-use') msg = 'Este e-mail já está cadastrado.';
+                    if (err.code === 'auth/weak-password') msg = 'A senha deve ter no mínimo 6 caracteres.';
+                    notificarAuth(msg, 'erro');
+                });
+        }
+
+        function recuperarSenha() {
+            const email = document.getElementById('login-email').value.trim();
+            if (!email) {
+                notificarAuth('Digite seu e-mail no campo acima primeiro.', 'erro');
+                return;
+            }
+            auth.sendPasswordResetEmail(email)
+                .then(() => notificarAuth('Link de redefinição enviado para seu e-mail!'))
+                .catch(() => notificarAuth('Verifique o e-mail digitado.', 'erro'));
+        }
+
+        const temaSalvo = localStorage.getItem('painel_tema_preferido') || 'dark';
+        document.documentElement.setAttribute('data-theme', temaSalvo);
+        
+        (function iniciarParticulasLogin() {
+            const canvas = document.getElementById('canvas-particulas');
+            const ctx = canvas.getContext('2d');
+            let w = canvas.width = window.innerWidth;
+            let h = canvas.height = window.innerHeight;
+            window.addEventListener('resize', () => { w = canvas.width = window.innerWidth; h = canvas.height = window.innerHeight; });
+            const pts = Array.from({ length: 30 }, () => ({
+                x: Math.random() * w, y: Math.random() * h,
+                r: Math.random() * 2 + 0.8,
+                vx: (Math.random() - 0.5) * 0.3, vy: (Math.random() - 0.5) * 0.3,
+                a: Math.random() * 0.3 + 0.1
+            }));
+            function loop() {
+                ctx.clearRect(0, 0, w, h);
+                pts.forEach(p => {
+                    p.x += p.vx; p.y += p.vy;
+                    if (p.x < 0 || p.x > w) p.vx *= -1;
+                    if (p.y < 0 || p.y > h) p.vy *= -1;
+                    ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+                    ctx.fillStyle = `rgba(59, 130, 246, ${p.a})`; ctx.fill();
+                });
+                requestAnimationFrame(loop);
+            }
+            loop();
+        })();
+    </script>
+</body>
+</html>
