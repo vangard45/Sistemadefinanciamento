@@ -1,0 +1,405 @@
+<!DOCTYPE html>
+<html lang="pt-BR" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Painel Financeiro Corporativo</title>
+    <link rel="icon" type="image/png" href="https://www.google.com/s2/favicons?domain=microsoft.com&sz=64">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <link rel="stylesheet" href="home.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.8/dist/chart.umd.min.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
+</head>
+<body>
+    
+    <!-- CANVAS DE PARTÍCULAS SUAVES -->
+    <canvas id="canvas-particulas"></canvas>
+
+    <!-- CONTAINER DE NOTIFICAÇÕES DINÂMICAS (TOASTS) -->
+    <div id="toast-container" class="toast-container"></div>
+
+    <!-- MENU DE NAVEGAÇÃO -->
+    <nav class="menu-lateral" id="menuLateral">
+        <ul>
+            <li class="item-menu ativo" onclick="mostrarTela('painelgeral', this)">
+                <a href="javascript:void(0)"><span class="icon"><i class="bi bi-grid-1x2-fill"></i></span><span class="text-link">Painel</span></a>
+            </li>
+            <li class="item-menu" onclick="mostrarTela('telaclientes', this)">
+                <a href="javascript:void(0)"><span class="icon"><i class="bi bi-people-fill"></i></span><span class="text-link">Clientes</span></a>
+            </li>
+            <li class="item-menu" onclick="mostrarTela('tela-financas', this)">
+                <a href="javascript:void(0)"><span class="icon"><i class="bi bi-wallet2"></i></span><span class="text-link">Finanças</span></a>
+            </li>
+            <li class="item-menu" onclick="mostrarTela('tela-perfil', this)">
+                <a href="javascript:void(0)"><span class="icon"><i class="bi bi-sliders"></i></span><span class="text-link">Perfil & Tema</span></a>
+            </li>
+        </ul>
+    </nav>
+
+    <div class="conteudo"> 
+        <!-- PAINEL GERAL -->
+        <div id="painelgeral" class="tela visivel">
+            <header class="topo-perfil-card animar-entrada">
+                <div class="perfil-topo">
+                    <div class="avatar" id="avatar-usuario"><i class="bi bi-person-fill"></i></div>
+                    <div class="info-topo">
+                        <h1 id="mostrarNome">Painel Administrativo</h1>
+                        <span class="saldo-topo-mini">Conta Corrente: <strong id="painel-saldo-conta-topo">R$ 0,00</strong></span>
+                    </div>
+                </div>
+                <button class="btn-tema-rapido" onclick="alternarTemaRapido()" title="Alternar Tema">
+                    <i class="bi bi-palette-fill"></i>
+                </button>
+            </header>
+
+            <div class="grade-resumo animar-entrada" style="animation-delay: 0.05s;">
+                <div class="card-resumo destaque-card">
+                    <div class="card-header-icon">
+                        <span class="rotulo"><i class="bi bi-safe2-fill"></i> Saldo Líquido Total</span>
+                        <span class="badge-status">Consolidado</span>
+                    </div>
+                    <span class="valor" id="painel-saldo-liquido">R$ 0,00</span>
+                </div>
+                <div class="card-resumo">
+                    <span class="rotulo"><i class="bi bi-bank2 icon-azul"></i> Saldo em Conta</span>
+                    <span class="valor res-entrada" id="painel-saldo-conta">R$ 0,00</span>
+                </div>
+                <div class="card-resumo">
+                    <span class="rotulo"><i class="bi bi-graph-up-arrow icon-verde"></i> Entradas (Mês)</span>
+                    <span class="valor res-gasto" id="painel-total-entradas">R$ 0,00</span>
+                </div>
+                <div class="card-resumo">
+                    <span class="rotulo"><i class="bi bi-graph-down-arrow icon-vermelho"></i> Gastos (Mês)</span>
+                    <span class="valor res-saldo" id="painel-total-gastos">R$ 0,00</span>
+                </div>
+            </div>
+
+            <div class="grade-resumo animar-entrada" style="animation-delay: 0.1s;">
+                <div class="card-resumo">
+                    <span class="rotulo"><i class="bi bi-cash-stack icon-azul"></i> Total Emprestado</span>
+                    <span class="valor res-entrada" id="painel-emprestado">R$ 0,00</span>
+                </div>
+                <div class="card-resumo">
+                    <span class="rotulo"><i class="bi bi-check-circle-fill icon-verde"></i> Total Recebido</span>
+                    <span class="valor res-gasto" id="painel-recebido">R$ 0,00</span>
+                </div>
+                <div class="card-resumo destaque-secundario" style="grid-column: span 2;">
+                    <span class="rotulo"><i class="bi bi-hourglass-split icon-laranja"></i> Pendente a Receber (Clientes)</span>
+                    <span class="valor res-saldo" id="painel-pendente">R$ 0,00</span>
+                </div>
+            </div>
+
+            <div class="cartao animar-entrada" style="animation-delay: 0.15s;">
+                <h3><i class="bi bi-bar-chart-line-fill"></i> Desempenho Financeiro</h3>
+                <div class="grafico-container">
+                    <canvas id="graficoPrincipal"></canvas>
+                </div>
+            </div>
+
+            <div class="cartao animar-entrada" style="animation-delay: 0.2s;">
+                <h3><i class="bi bi-pie-chart-fill"></i> Fluxo de Caixa</h3>
+                <div class="grafico-container" style="height: 210px;">
+                    <canvas id="graficoPizza"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- TELA DE CLIENTES -->
+        <div id="telaclientes" class="tela">
+            <section id="secao-lista" class="secao visivel">
+                <header class="cabecalho animar-entrada">
+                    <div>
+                        <h1>Gestão de Clientes</h1>
+                        <p class="subtitulo-pagina">Controle de carteira e parcelas</p>
+                    </div>
+                    <button class="btn-principal btn-auto" onclick="abrirModalPessoa()">
+                        <i class="bi bi-person-plus-fill"></i> Novo Cliente
+                    </button>
+                </header>
+
+                <!-- BARRA DE BUSCA RÁPIDA -->
+                <div class="barra-pesquisa-container animar-entrada">
+                    <i class="bi bi-search"></i>
+                    <input type="text" id="input-busca-clientes" placeholder="Pesquisar cliente por nome..." oninput="filtrarClientes()">
+                </div>
+
+                <div class="grid-pessoas animar-entrada" id="lista-pessoas"></div>
+            </section>
+
+            <section id="secao-perfil" class="secao">
+                <button class="btn-voltar" onclick="voltarLista()">
+                    <i class="bi bi-arrow-left"></i> Voltar para a lista
+                </button>
+                
+                <div class="perfil-card animar-entrada">
+                    <div class="perfil-esquerda">
+                        <div class="foto-perfil" id="foto-perfil"><i class="bi bi-person-fill"></i></div>
+                        <div>
+                            <h2 id="nome-pessoa">Nome</h2>
+                            <p class="info-secundaria" id="tel-pessoa"></p>
+                            <p class="obs-destaque" id="obs-pessoa"></p>
+                            <div id="container-whatsapp" style="margin-top: 8px;"></div>
+                        </div>
+                    </div>
+                    <div class="perfil-botoes">
+                        <button class="btn-icone btn-editar" onclick="abrirModalEditarPessoa()" title="Editar Cliente">
+                            <i class="bi bi-pencil-fill"></i>
+                        </button>
+                        <button class="btn-icone btn-apagar" onclick="confirmarExcluirPessoa()" title="Excluir Cliente">
+                            <i class="bi bi-trash-fill"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="resumo-card animar-entrada">
+                    <h3><i class="bi bi-clipboard-data-fill"></i> Resumo Financeiro do Cliente</h3>
+                    <div class="resumo-grid">
+                        <div class="resumo-item">
+                            <span class="resumo-valor" id="total-emprestado">R$ 0,00</span>
+                            <span class="resumo-label">Emprestado</span>
+                        </div>
+                        <div class="resumo-item destaque">
+                            <span class="resumo-valor" id="total-a-receber">R$ 0,00</span>
+                            <span class="resumo-label">A Receber</span>
+                        </div>
+                        <div class="resumo-item">
+                            <span class="resumo-valor" id="valor-pago">R$ 0,00</span>
+                            <span class="resumo-label">Já Pago</span>
+                        </div>
+                    </div>
+                    <div class="progresso-container">
+                        <div class="progresso-info">
+                            <span>Progresso de Quitação</span>
+                            <span id="porcentagem-pago">0%</span>
+                        </div>
+                        <div class="progresso-barra">
+                            <div class="progresso-preenchimento" id="barra-progresso" style="width: 0%"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-card animar-entrada">
+                    <h3 id="titulo-form"><i class="bi bi-plus-circle-fill"></i> Novo Empréstimo</h3>
+                    <input type="hidden" id="editando-id" value="">
+                    
+                    <div class="form-grid">
+                        <div class="form-grupo">
+                            <label>Valor Emprestado (R$)</label>
+                            <input type="text" id="valor" class="input-moeda" placeholder="0,00" inputmode="decimal">
+                        </div>
+                        <div class="form-grupo">
+                            <label>Nº de Parcelas</label>
+                            <input type="number" id="parcelas" placeholder="1" min="1" inputmode="numeric">
+                        </div>
+                        <div class="form-grupo">
+                            <label>Juros (%)</label>
+                            <input type="text" id="juros" class="input-moeda" placeholder="0" inputmode="decimal">
+                        </div>
+                        <div class="form-grupo">
+                            <label>Data</label>
+                            <input type="date" id="data">
+                        </div>
+                    </div>
+                    
+                    <button class="btn-principal" id="btn-salvar" onclick="salvarEmprestimo()">
+                        <i class="bi bi-check-lg"></i> Registrar Empréstimo
+                    </button>
+                    <button class="btn-secundario" id="btn-atualizar" onclick="salvarEmprestimo()" style="display:none;">
+                        <i class="bi bi-arrow-repeat"></i> Atualizar Registro
+                    </button>
+                    <button class="btn-cancelar" id="btn-cancelar" onclick="limparForm()" style="display:none;">
+                        <i class="bi bi-x-lg"></i> Cancelar
+                    </button>
+                </div>
+
+                <div class="historico-card animar-entrada">
+                    <h3><i class="bi bi-clock-history"></i> Histórico de Empréstimos</h3>
+                    <div id="lista-historico"></div>
+                </div>
+            </section>
+        </div>
+
+        <!-- TELA DE FINANÇAS -->
+        <div id="tela-financas" class="tela">
+            <div class="cartao animar-entrada">
+                <h2><i class="bi bi-arrow-left-right"></i> Controle de Entradas e Gastos</h2>
+                <div class="form-grid" style="margin-top: 15px;">
+                    <div class="form-grupo">
+                        <label>Tipo de Lançamento</label>
+                        <select id="fin-tipo">
+                            <option value="entrada">Entrada (Receita)</option>
+                            <option value="gasto">Gasto (Despesa)</option>
+                        </select>
+                    </div>
+                    <div class="form-grupo">
+                        <label>Descrição / Título</label>
+                        <input type="text" id="fin-titulo" placeholder="Ex: Salário, Supermercado...">
+                    </div>
+                    <div class="form-grupo">
+                        <label>Valor (R$)</label>
+                        <input type="text" id="fin-valor" class="input-moeda" placeholder="0,00" inputmode="decimal">
+                    </div>
+                    <div class="form-grupo">
+                        <label>Categoria</label>
+                        <select id="fin-categoria">
+                            <option value="Alimentação">Alimentação</option>
+                            <option value="Moradia">Moradia</option>
+                            <option value="Transporte">Transporte</option>
+                            <option value="Lazer">Lazer</option>
+                            <option value="Salário">Salário / Renda</option>
+                            <option value="Outros">Outros</option>
+                        </select>
+                    </div>
+                    <div class="form-grupo" style="grid-column: span 2;">
+                        <label>Data</label>
+                        <input type="date" id="fin-data">
+                    </div>
+                </div>
+                <button class="btn-principal" onclick="salvarFinanca()" style="margin-top: 15px;">
+                    <i class="bi bi-check2-circle"></i> Salvar Lançamento
+                </button>
+            </div>
+
+            <div class="grade-resumo animar-entrada" style="margin-top: 16px;">
+                <div class="card-resumo">
+                    <span class="rotulo"><i class="bi bi-arrow-up-circle-fill icon-verde"></i> Total Entradas</span>
+                    <span class="valor res-gasto" id="fin-total-entradas">R$ 0,00</span>
+                </div>
+                <div class="card-resumo">
+                    <span class="rotulo"><i class="bi bi-arrow-down-circle-fill icon-vermelho"></i> Total Gastos</span>
+                    <span class="valor res-saldo" id="fin-total-gastos">R$ 0,00</span>
+                </div>
+            </div>
+
+            <div class="historico-card animar-entrada">
+                <h3><i class="bi bi-receipt"></i> Extrato de Lançamentos</h3>
+                <div id="lista-financas"></div>
+            </div>
+        </div>
+
+        <!-- TELA PERFIL E TEMA -->
+        <div id="tela-perfil" class="tela">
+            <div class="cartao animar-entrada" style="text-align: center;">
+                <div class="avatar" id="perfil-foto-grande" style="width: 84px; height: 84px; margin: 0 auto 15px auto; font-size: 36px;">
+                    <i class="bi bi-person-fill"></i>
+                </div>
+                <h2 id="perfil-nome-exibir" style="font-size: 20px; font-weight: 700;">Meu Nome</h2>
+                <p class="subtitulo-pagina" style="margin-bottom: 20px;">Painel de Controle Executivo</p>
+
+                <div class="grade-resumo" style="text-align: left; margin-bottom: 18px;">
+                    <div class="card-resumo">
+                        <span class="rotulo"><i class="bi bi-bank2 icon-azul"></i> Saldo em Conta</span>
+                        <span class="valor res-entrada" id="perfil-saldo-conta">R$ 0,00</span>
+                    </div>
+                    <div class="card-resumo">
+                        <span class="rotulo"><i class="bi bi-bullseye icon-laranja"></i> Objetivo / Meta</span>
+                        <span class="valor res-saldo" id="perfil-meta-exibir">R$ 0,00</span>
+                    </div>
+                </div>
+
+                <!-- SELETOR DE TEMAS -->
+                <div class="seletor-tema-box">
+                    <label class="label-tema"><i class="bi bi-palette2"></i> Aparência do Sistema</label>
+                    <div class="opcoes-tema">
+                        <button class="btn-tema" data-tema-btn="dark" onclick="aplicarTema('dark')">
+                            <span class="cor-preview" style="background: #0b1329; border-color: #3b82f6;"></span>
+                            Noite Azul
+                        </button>
+                        <button class="btn-tema" data-tema-btn="light" onclick="aplicarTema('light')">
+                            <span class="cor-preview" style="background: #f8fafc; border-color: #2563eb;"></span>
+                            Claro Executivo
+                        </button>
+                        <button class="btn-tema" data-tema-btn="emerald" onclick="aplicarTema('emerald')">
+                            <span class="cor-preview" style="background: #061814; border-color: #10b981;"></span>
+                            Esmeralda Dark
+                        </button>
+                    </div>
+                </div>
+
+                <button class="btn-principal" onclick="toggleFormularioPerfil()" id="btn-toggle-perfil" style="margin-top: 16px;">
+                    <i class="bi bi-pencil-square"></i> Editar Perfil & Metas
+                </button>
+            </div>
+
+            <!-- FORMULÁRIO DE EDIÇÃO DE PERFIL -->
+            <div class="cartao animar-entrada" id="painel-editar-perfil" style="display: none;">
+                <h2><i class="bi bi-gear-fill"></i> Configurações do Perfil</h2>
+                <div class="form-grid" style="margin-top: 15px;">
+                    <div class="form-grupo">
+                        <label>Seu Nome</label>
+                        <input type="text" id="input-meu-nome" placeholder="Digite seu nome">
+                    </div>
+                    <div class="form-grupo">
+                        <label>Link da Sua Foto (URL)</label>
+                        <input type="text" id="input-minha-foto" placeholder="https://...">
+                    </div>
+                    <div class="form-grupo" style="grid-column: span 2;">
+                        <label>Definir Meta Financeira (R$)</label>
+                        <input type="text" id="input-meta-financeira" class="input-moeda" placeholder="0,00" inputmode="decimal">
+                    </div>
+                </div>
+                <div style="display: flex; gap: 10px; margin-top: 15px; flex-direction: column;">
+                    <button class="btn-principal" onclick="salvarMeuPerfil()">
+                        <i class="bi bi-check-lg"></i> Salvar Alterações
+                    </button>
+                    <button class="btn-excluir" onclick="apagarTudoFirebase()">
+                        <i class="bi bi-trash-fill"></i> Limpar Banco de Dados
+                    </button>
+                </div>
+            </div>
+        </div> 
+    </div>
+
+    <!-- MODAL PESSOA -->
+    <div class="fundo-modal" id="modal-pessoa">
+        <div class="modal">
+            <button class="btn-fechar-x" onclick="fecharModal()"><i class="bi bi-x-lg"></i></button>
+            <h3 id="modal-titulo">Novo Cliente</h3>
+            <input type="hidden" id="modal-id">
+            
+            <div class="form-grupo" style="margin-bottom: 12px;">
+                <label>Nome Completo *</label>
+                <input type="text" id="modal-nome" placeholder="Digite o nome">
+            </div>
+            <div class="form-grupo" style="margin-bottom: 12px;">
+                <label>Telefone / WhatsApp</label>
+                <input type="tel" id="modal-tel" class="input-telefone" placeholder="(00) 00000-0000" inputmode="tel" maxlength="15">
+            </div>
+            <div class="form-grupo" style="margin-bottom: 12px;">
+                <label>Descrição / Observações</label>
+                <input type="text" id="modal-obs" placeholder="Ex: Paga todo dia 15">
+            </div>
+            <div class="form-grupo" style="margin-bottom: 12px;">
+                <label>Link da Foto (URL)</label>
+                <input type="text" id="modal-foto" placeholder="https://...">
+            </div>
+            
+            <div class="botoes-modal">
+                <button class="btn-cancelar" onclick="fecharModal()" style="display:block;">Cancelar</button>
+                <button class="btn-principal" onclick="salvarPessoa()">Salvar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL DETALHES EMPRÉSTIMO -->
+    <div class="fundo-modal" id="modal-detalhes">
+        <div class="modal">
+            <button class="btn-fechar-x" onclick="fecharDetalhes()"><i class="bi bi-x-lg"></i></button>
+            <h3>Gerenciar Empréstimo</h3>
+            <div id="conteudo-detalhes" style="margin-bottom: 20px; font-size: 14px; line-height: 1.7; text-align: left;"></div>
+            <div class="botoes-modal">
+                <button class="btn-principal" onclick="editarSelecionado()">
+                    <i class="bi bi-pencil-fill"></i> Editar
+                </button>
+                <button class="btn-excluir" onclick="excluirSelecionado()">
+                    <i class="bi bi-trash-fill"></i> Excluir
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script src="home.js"></script>
+</body>
+</html>
